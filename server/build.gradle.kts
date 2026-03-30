@@ -9,7 +9,9 @@ dependencies {
     implementation(libs.ktor.serverWebsockets)
     implementation(libs.logback)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.ktor.serverNegotiation)
     implementation(project(":composeApp"))
+    implementation(project(":shared"))
 }
 
 application {
