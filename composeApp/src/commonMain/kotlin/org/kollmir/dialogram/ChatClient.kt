@@ -1,7 +1,9 @@
 package org.kollmir.dialogram
 
 import io.ktor.client.*
+import io.ktor.client.call.body
 import io.ktor.client.plugins.websocket.*
+import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.*
 import io.ktor.websocket.*
@@ -39,10 +41,27 @@ class ChatClient(private val httpClient: HttpClient) {
         session?.sendSerialized(message)
     }
 
+    suspend fun login(username: String, password: String): LoginResponse {
+        return try {
+            httpClient.post("http://localhost:${SERVER_PORT}/login") {
+                contentType(ContentType.Application.Json)
+                setBody(LoginRequest(username, password))
+            }.body()
+        } catch (e: Exception) {
+            LoginResponse(false, "Ошибка сети: ${e.message}")
+        }
+    }
+
     fun observeMessages(): Flow<ChatMessage> = flow {
-        while(true) {
-            val msg = session?.receiveDeserialized<ChatMessage>()
-            if (msg != null) emit(msg)
+        try {
+            session?.let { currentSession ->
+                while(true) {
+                    val received = currentSession.receiveDeserialized<ChatMessage>()
+                    emit(received)
+                }
+            }
+        } catch (e: Exception) {
+            println("Соединение закрыто")
         }
     }
 }

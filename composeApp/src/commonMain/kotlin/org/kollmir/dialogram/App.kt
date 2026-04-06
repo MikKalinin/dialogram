@@ -16,6 +16,11 @@ import kotlinx.serialization.json.Json
 
 @Composable
 fun App() {
+    var isLoggedIn by remember { mutableStateOf(false) }
+    var loginUsername by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf("") }
+
     val scope = rememberCoroutineScope()
 
     var userName by remember { mutableStateOf("User_${(1..100).random()}") }
@@ -23,74 +28,99 @@ fun App() {
     val messages = remember { mutableStateListOf<ChatMessage>() }
     var isConnected by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        try {
-            chatClient.connect()
-            isConnected = true
-            chatClient.observeMessages().collect { msg ->
-                messages.add(msg)
+    if(!isLoggedIn) {
+        Column(Modifier.fillMaxSize().padding(32.dp), verticalArrangement = Arrangement.Center) {
+            Text("Вход в Dialogram", style = MaterialTheme.typography.headlineMedium)
+            TextField(loginUsername, { loginUsername = it }, label = { Text("Логин") })
+            TextField(password, { password = it }, label = { Text("Пароль")} )
+
+            if (errorMessage.isNotEmpty()) {
+                Text(errorMessage, color = androidx.compose.ui.graphics.Color.Red)
             }
-        } catch (e: Exception) {
-            isConnected = false
-            println("Ошибка чата: ${e.message}")
+
+            Button(onClick =  {
+                scope.launch {
+                    val response = chatClient.login(loginUsername, password)
+                    if (response.success) {
+                        isLoggedIn = true
+                    } else {
+                        errorMessage = response.message
+                    }
+                }
+            }) {
+                Text("Войти")
+            }
         }
-    }
-    MaterialTheme {
-        Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-            // Верхняя панель: Статус и Имя
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = if (isConnected) "● Online" else "○ Offline",
-                    color = if (isConnected) androidx.compose.ui.graphics.Color.Green else androidx.compose.ui.graphics.Color.Red
-                )
-                Spacer(Modifier.width(16.dp))
-                TextField(
-                    value = userName,
-                    onValueChange = { userName = it },
-                    label = { Text("Ваше имя") },
-                    modifier = Modifier.weight(1f)
-                )
+    } else {
+        LaunchedEffect(Unit) {
+            try {
+                chatClient.connect()
+                isConnected = true
+                chatClient.observeMessages().collect { msg ->
+                    messages.add(msg)
+                }
+            } catch (e: Exception) {
+                isConnected = false
+                println("Ошибка чата: ${e.message}")
             }
+        }
+        MaterialTheme {
+            Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+                // Верхняя панель: Статус и Имя
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = if (isConnected) "● Online" else "○ Offline",
+                        color = if (isConnected) androidx.compose.ui.graphics.Color.Green else androidx.compose.ui.graphics.Color.Red
+                    )
+                    Spacer(Modifier.width(16.dp))
+                    TextField(
+                        value = userName,
+                        onValueChange = { userName = it },
+                        label = { Text("Ваше имя") },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
 
-            Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(16.dp))
 
-            // Список сообщений
-            LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                items(messages) { msg ->
-                    Card(
-                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                        modifier = Modifier.padding(vertical = 4.dp).fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.padding(8.dp)) {
-                            Text(msg.sender, color = MaterialTheme.colorScheme.primary)
-                            Text(msg.text)
+                // Список сообщений
+                LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    items(messages) { msg ->
+                        Card(
+                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                            modifier = Modifier.padding(vertical = 4.dp).fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(8.dp)) {
+                                Text(msg.sender, color = MaterialTheme.colorScheme.primary)
+                                Text(msg.text)
+                            }
                         }
                     }
                 }
-            }
 
-            Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(8.dp))
 
-            // Поле ввода и кнопка
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                TextField(
-                    value = inputText,
-                    onValueChange = { inputText = it },
-                    modifier = Modifier.weight(1f),
-                    placeholder = { Text("Введите сообщение...") }
-                )
-                IconButton(
-                    onClick = {
-                        if (inputText.isNotBlank()) {
-                            scope.launch {
-                                chatClient.sendMessage(userName, inputText)
-                                inputText = ""
+                // Поле ввода и кнопка
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    TextField(
+                        value = inputText,
+                        onValueChange = { inputText = it },
+                        modifier = Modifier.weight(1f),
+                        placeholder = { Text("Введите сообщение...") }
+                    )
+                    IconButton(
+                        onClick = {
+                            if (inputText.isNotBlank()) {
+                                scope.launch {
+                                    chatClient.sendMessage(userName, inputText)
+                                    inputText = ""
+                                }
                             }
-                        }
-                    },
-                    enabled = isConnected
-                ) {
-                    Text("➤")
+                        },
+                        enabled = isConnected
+                    ) {
+                        Text("➤")
+                    }
                 }
             }
         }

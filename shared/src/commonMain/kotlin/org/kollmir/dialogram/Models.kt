@@ -10,3 +10,15 @@ data class ChatMessage(
     val timestamp: Long
 )
 
+@Serializable
+data class LoginRequest(
+    val username: String,
+    val passwoedHash: String
+)
+
+@Serializable
+data class LoginResponse(
+    val success: Boolean,
+    val message: String,
+    val useId: String? = null
+)

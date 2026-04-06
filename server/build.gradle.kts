@@ -10,6 +10,7 @@ dependencies {
     implementation(libs.logback)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.ktor.serverNegotiation)
+    implementation("org.mindrot:jbcrypt:0.4")
     implementation(project(":composeApp"))
     implementation(project(":shared"))
 }
