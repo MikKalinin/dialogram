@@ -9,8 +9,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.material3.*
 import androidx.compose.ui.Alignment
 import io.ktor.client.HttpClient
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.websocket.*
 import io.ktor.serialization.kotlinx.*
+import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
@@ -27,6 +29,18 @@ fun App() {
     var inputText by remember { mutableStateOf("") }
     val messages = remember { mutableStateListOf<ChatMessage>() }
     var isConnected by remember { mutableStateOf(false) }
+    val myHttpClient = HttpClient {
+        install(WebSockets) {
+            contentConverter = KotlinxWebsocketSerializationConverter(Json)
+        }
+        install(ContentNegotiation) {
+            json(Json {
+                ignoreUnknownKeys = true
+                isLenient = true
+            })
+        }
+    }
+    val chatClient = ChatClient(myHttpClient)
 
     if(!isLoggedIn) {
         Column(Modifier.fillMaxSize().padding(32.dp), verticalArrangement = Arrangement.Center) {

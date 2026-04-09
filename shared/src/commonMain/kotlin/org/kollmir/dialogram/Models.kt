@@ -13,7 +13,7 @@ data class ChatMessage(
 @Serializable
 data class LoginRequest(
     val username: String,
-    val passwoedHash: String
+    val passwordHash: String
 )
 
 @Serializable

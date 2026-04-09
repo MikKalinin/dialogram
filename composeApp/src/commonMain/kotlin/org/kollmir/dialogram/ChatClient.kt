@@ -5,45 +5,39 @@ import io.ktor.client.call.body
 import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
 import io.ktor.http.*
-import io.ktor.serialization.kotlinx.*
-import io.ktor.websocket.*
-import io.ktor.websocket.serialization.*
 import kotlinx.coroutines.flow.*
-import kotlinx.serialization.builtins.serializer
-import kotlinx.serialization.json.Json
 import kotlin.time.Clock
 
 class ChatClient(private val httpClient: HttpClient) {
-    private val client = HttpClient {
-        install(WebSockets) {
-            contentConverter = KotlinxWebsocketSerializationConverter(Json)
-        }
-    }
-
     private var session: DefaultClientWebSocketSession? = null
 
     suspend fun connect() {
-        session = client.webSocketSession(
-            method = HttpMethod.Get,
-            host  = "localhost",
-            port = SERVER_PORT,
-            path = "/chat"
-        )
+        if (session == null) {
+            session = httpClient.webSocketSession(
+                method = HttpMethod.Get,
+                host = "127.0.0.1",
+                port = SERVER_PORT,
+                path = "/chat"
+            )
+        }
     }
-
     suspend fun sendMessage(userName: String, text: String) {
         val message = ChatMessage(
             sender = userName,
             text = text,
-            id = "1",
+            id = Clock.System.now().toEpochMilliseconds().toString(),
             timestamp = Clock.System.now().toEpochMilliseconds()
         )
-        session?.sendSerialized(message)
+        try {
+            session?.sendSerialized(message)
+        } catch (e: Exception) {
+            println("Ошибка отправки сообщения: ${e.message}")
+        }
     }
 
     suspend fun login(username: String, password: String): LoginResponse {
         return try {
-            httpClient.post("http://localhost:${SERVER_PORT}/login") {
+            httpClient.post("http://127.0.0.1:${SERVER_PORT}/login") {
                 contentType(ContentType.Application.Json)
                 setBody(LoginRequest(username, password))
             }.body()
@@ -63,5 +57,9 @@ class ChatClient(private val httpClient: HttpClient) {
         } catch (e: Exception) {
             println("Соединение закрыто")
         }
+    }
+
+    fun disconnect() {
+        session = null
     }
 }
