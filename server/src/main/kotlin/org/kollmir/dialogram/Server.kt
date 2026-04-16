@@ -18,12 +18,31 @@ import io.ktor.server.websocket.*
 import kotlinx.serialization.json.Json
 import org.slf4j.event.Level
 import java.util.concurrent.CopyOnWriteArraySet
+import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.transactions.transaction
 
 val connections = CopyOnWriteArraySet<DefaultWebSocketServerSession>()
-val users = mutableMapOf("admin" to HashCoder.hashPassword("1234"), "user1" to HashCoder.hashPassword("qwerty"))
+fun initDatabase() {
+    Database.connect("jdbc:sqlite:./data.db", driver = "org.sqlite.JDBC")
+
+    transaction {
+        SchemaUtils.create(Users)
+
+        val adminExists = Users.select { Users.username eq "admin" }.empty()
+        if (adminExists) {
+            Users.insert {
+                it[username] = "admin"
+                it[passwordHash] = HashCoder.hashPassword("toor")
+            }
+        }
+    }
+}
+
 
 fun main() {
     System.setOut(java.io.PrintStream(System.`out`, true, "UTF-8"))
+    initDatabase()
 
     embeddedServer(Netty, port = SERVER_PORT) {
         install(CORS) {
@@ -76,9 +95,13 @@ fun main() {
             post("/login") {
                 try {
                     val request = call.receive<LoginRequest>()
-                    val userHashFromDb = users[request.username]
+                    val userFromDb = transaction {
+                        Users.select { Users.username eq request.username }
+                            .map { it[Users.passwordHash] }
+                            .singleOrNull()
+                    }
 
-                    if (userHashFromDb != null && HashCoder.verifyPassword(request.passwordHash, userHashFromDb)) {
+                    if (userFromDb != null && HashCoder.verifyPassword(request.passwordHash, userFromDb)) {
                         call.respond(LoginResponse(true, "Добро пожаловать!"))
                     } else {
                         call.respond(LoginResponse(false, "Неверный логин или пароль"))
