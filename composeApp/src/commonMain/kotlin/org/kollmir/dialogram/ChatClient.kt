@@ -14,7 +14,7 @@ class ChatClient(private val httpClient: HttpClient) {
         if (session == null) {
             session = httpClient.webSocketSession(
                 method = HttpMethod.Get,
-                host = "127.0.0.1",
+                host = "192.168.1.131",
                 port = SERVER_PORT,
                 path = "/chat"
             )
@@ -34,7 +34,7 @@ class ChatClient(private val httpClient: HttpClient) {
 
     suspend fun login(username: String, password: String): LoginResponse {
         return try {
-            httpClient.post("http://127.0.0.1:${SERVER_PORT}/login") {
+            httpClient.post("http://192.168.1.131:${SERVER_PORT}/login") {
                 contentType(ContentType.Application.Json)
                 setBody(LoginRequest(username, password))
             }.body()
@@ -45,7 +45,7 @@ class ChatClient(private val httpClient: HttpClient) {
 
     suspend fun register(username: String, passwordHash: String): LoginResponse {
         return try {
-            httpClient.post("http://127.0.0.1:9090/register") {
+            httpClient.post("http://192.168.1.131:${SERVER_PORT}/register") {
                 contentType(ContentType.Application.Json)
                 setBody(LoginRequest(username, passwordHash))
             }.body()

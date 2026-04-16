@@ -44,8 +44,7 @@ fun initDatabase() {
 fun main() {
     System.setOut(java.io.PrintStream(System.`out`, true, "UTF-8"))
     initDatabase()
-
-    embeddedServer(Netty, port = SERVER_PORT) {
+    embeddedServer(Netty, port = SERVER_PORT, host = "0.0.0.0") {
         install(CORS) {
             anyHost()
 
