@@ -21,13 +21,14 @@ import java.util.concurrent.CopyOnWriteArraySet
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
+import java.time.LocalDateTime
 
 val connections = CopyOnWriteArraySet<DefaultWebSocketServerSession>()
 fun initDatabase() {
     Database.connect("jdbc:sqlite:./data.db", driver = "org.sqlite.JDBC")
 
     transaction {
-        SchemaUtils.create(Users)
+        SchemaUtils.create(Users, Messages)
 
         val adminExists = Users.select { Users.username eq "admin" }.empty()
         if (adminExists) {
@@ -80,7 +81,15 @@ fun main() {
                 try {
                     while (true) {
                         val message = receiveDeserialized<ChatMessage>()
-                        println("СЕРВЕР ПОЛУЧИЛ: ${message.text}")
+
+                        transaction {
+                            Messages.insert {
+                                it[sender] = message.sender
+                                it[text] = message.text
+                                it[timestamp] = LocalDateTime.now()
+                            }
+                        }
+
                         connections.forEach { session ->
                             session.sendSerialized(message)
                         }
@@ -91,7 +100,17 @@ fun main() {
                     connections -= this
                 }
             }
-
+            get("/history") {
+                val history = transaction {
+                    Messages.selectAll()
+                        .orderBy(Messages.timestamp to SortOrder.ASC)
+                        .limit(50)
+                        .map {
+                            ChatMessage(sender = it[Messages.sender], text = it[Messages.text])
+                        }
+                }
+                call.respond(history)
+            }
             post("/login") {
                 try {
                     val request = call.receive<LoginRequest>()
@@ -109,6 +128,25 @@ fun main() {
                 } catch (e: Exception) {
                     println("ОШИБКА ДЕСЕРИАЛИЗАЦИИ: ${e.localizedMessage}")
                     call.respond(HttpStatusCode.BadRequest, "Неверный формат данных")
+                }
+            }
+            post("/register") {
+                val request = call.receive<LoginRequest>()
+
+                val userExists = transaction {
+                    Users.select { Users.username eq request.username }.any()
+                }
+
+                if (userExists) {
+                    call.respond(LoginResponse(false, "Пользователь уже существует"))
+                } else {
+                    transaction {
+                        Users.insert {
+                            it[username] = request.username
+                            it[passwordHash] = HashCoder.hashPassword(request.passwordHash)
+                        }
+                    }
+                    call.respond(LoginResponse(true, "Регистрация успешна!"))
                 }
             }
         }

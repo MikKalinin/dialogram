@@ -10,6 +10,7 @@ dependencies {
     implementation(libs.ktor.serverWebsockets)
     implementation(libs.exposed.core)
     implementation(libs.exposed.dao)
+    implementation(libs.exposed.java.time)
     implementation(libs.exposed.jdbc)
     implementation(libs.sqlite.jdbc)
     implementation(libs.logback)
