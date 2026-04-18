@@ -34,7 +34,7 @@ class ChatClient(private val httpClient: HttpClient) {
 
     suspend fun login(username: String, password: String): LoginResponse {
         return try {
-            httpClient.post("http://192.168.1.131:${SERVER_PORT}/login") {
+            httpClient.post("http://192.168.1.131:$SERVER_PORT/login") {
                 contentType(ContentType.Application.Json)
                 setBody(LoginRequest(username, password))
             }.body()
@@ -45,12 +45,20 @@ class ChatClient(private val httpClient: HttpClient) {
 
     suspend fun register(username: String, passwordHash: String): LoginResponse {
         return try {
-            httpClient.post("http://192.168.1.131:${SERVER_PORT}/register") {
+            httpClient.post("http://192.168.1.131:$SERVER_PORT/register") {
                 contentType(ContentType.Application.Json)
                 setBody(LoginRequest(username, passwordHash))
             }.body()
         } catch (e: Exception) {
             LoginResponse(false, "Ошибка сети: ${e.message}")
+        }
+    }
+
+    suspend fun getHistory(): List<ChatMessage> {
+        return try {
+            httpClient.get("http://192.168.1.131:$SERVER_PORT/history").body()
+        } catch (e: Exception) {
+            emptyList()
         }
     }
 

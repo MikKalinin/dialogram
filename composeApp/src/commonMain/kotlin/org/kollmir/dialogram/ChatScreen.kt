@@ -8,13 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.unit.dp
-import io.ktor.client.HttpClient
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.plugins.websocket.WebSockets
-import io.ktor.serialization.kotlinx.KotlinxWebsocketSerializationConverter
-import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
 
 @Composable
 fun ChatScreen() {
@@ -26,6 +20,9 @@ fun ChatScreen() {
 
     LaunchedEffect(Unit) {
         try {
+            val history = chatClient.getHistory()
+            messages.addAll(history)
+
             chatClient.connect()
             chatClient.observeMessages().collect { msg ->
                 messages.add(msg)
