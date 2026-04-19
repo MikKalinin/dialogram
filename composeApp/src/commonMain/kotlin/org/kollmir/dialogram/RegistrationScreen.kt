@@ -13,6 +13,7 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun RegistrationScreen(
+    client: ChatClient,
     onRegistrationSuccess: () -> Unit,
     onBackToLogin: () -> Unit
 ) {
@@ -66,7 +67,7 @@ fun RegistrationScreen(
                     errorText = "Логин слишком короткий"
                 } else {
                     scope.launch {
-                        val response = chatClient.register(username, password)
+                        val response = client.register(username, password)
                         if (response.success) {
                             onRegistrationSuccess()
                         } else {

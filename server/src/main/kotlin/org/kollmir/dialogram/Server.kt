@@ -22,8 +22,6 @@ import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.LocalDateTime
-
-val connections = CopyOnWriteArraySet<DefaultWebSocketServerSession>()
 fun initDatabase() {
     Database.connect("jdbc:sqlite:./data.db", driver = "org.sqlite.JDBC")
 
@@ -42,7 +40,7 @@ fun initDatabase() {
 
 
 fun main() {
-    System.setOut(java.io.PrintStream(System.`out`, true, "UTF-8"))
+    System.setOut(java.io.PrintStream(System.`out`, true, "Windows-1252"))
     initDatabase()
     embeddedServer(Netty, port = SERVER_PORT, host = "0.0.0.0") {
         install(CORS) {

@@ -16,7 +16,8 @@ import kotlinx.serialization.json.Json
 
 @Composable
 fun LoginScreen(
-    onSuccess: () -> Unit,
+    client: ChatClient,
+    onSuccess: (nickname: String) -> Unit,
     onRegisterClick: () -> Unit
 ) {
     var username by remember { mutableStateOf("") }
@@ -35,9 +36,9 @@ fun LoginScreen(
 
         Button(onClick =  {
             scope.launch {
-                val response = chatClient.login(username, password)
+                val response = client.login(username, password)
                 if (response.success) {
-                    onSuccess()
+                    onSuccess(username)
                 } else {
                     errorText = response.message
                 }

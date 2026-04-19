@@ -3,87 +3,102 @@ package org.kollmir.dialogram
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChatScreen() {
+fun ChatScreen(client: ChatClient, nickname: String) {
     val scope = rememberCoroutineScope()
-
-    var userName by remember { mutableStateOf("User_${(1..100).random()}") }
-    var inputText by remember { mutableStateOf("") }
     val messages = remember { mutableStateListOf<ChatMessage>() }
+    var messageText by remember { mutableStateOf("") }
+    val listState = rememberLazyListState()
 
     LaunchedEffect(Unit) {
-        try {
-            val history = chatClient.getHistory()
-            messages.addAll(history)
+        val history = client.getHistory()
+        messages.addAll(history)
 
-            chatClient.connect()
-            chatClient.observeMessages().collect { msg ->
-                messages.add(msg)
+        client.connectToChat().collect { msg ->
+            messages.add(msg)
+            println("$msg добавлено")
             }
-        } catch (e: Exception) {
-            println("Ошибка чата: ${e.message}")
+
+    }
+
+    LaunchedEffect(messages.size) {
+        if (messages.isNotEmpty()) {
+            listState.animateScrollToItem(messages.size - 1)
         }
     }
-    MaterialTheme {
-        Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-            // Верхняя панель: Статус и Имя
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "● Online",
-                    color = androidx.compose.ui.graphics.Color.Green
-                )
-                Spacer(Modifier.width(16.dp))
-                TextField(
-                    value = userName,
-                    onValueChange = { userName = it },
-                    label = { Text("Ваше имя") },
-                    modifier = Modifier.weight(1f)
-                )
-            }
 
-            Spacer(Modifier.height(16.dp))
-
-            // Список сообщений
-            LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
+    Scaffold(
+        topBar = {
+            TopAppBar(title = { Text("Чат: $nickname") })
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(padding)
+                .padding(16.dp)
+        ) {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 items(messages) { msg ->
                     Card(
-                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                        modifier = Modifier.padding(vertical = 4.dp).fillMaxWidth()
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (msg.sender == nickname)
+                                MaterialTheme.colorScheme.primaryContainer
+                            else
+                                MaterialTheme.colorScheme.surfaceContainer
+                        )
                     ) {
                         Column(modifier = Modifier.padding(8.dp)) {
-                            Text(msg.sender, color = MaterialTheme.colorScheme.primary)
-                            Text(msg.text)
+                            Text(
+                                text = msg.sender,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = if (msg.sender == nickname) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = msg.text,
+                                style = MaterialTheme.typography.labelMedium
+                            )
                         }
                     }
                 }
             }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // Поле ввода и кнопка
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 TextField(
-                    value = inputText,
-                    onValueChange = { inputText = it },
+                    value = messageText,
+                    onValueChange = { messageText = it },
                     modifier = Modifier.weight(1f),
-                    placeholder = { Text("Введите сообщение...") }
+                    placeholder = { Text("Сообщение...") }
                 )
                 IconButton(
                     onClick = {
-                        if (inputText.isNotBlank()) {
+                        if (messageText.isNotBlank()) {
                             scope.launch {
-                                chatClient.sendMessage(userName, inputText)
-                                inputText = ""
+                                client.sendMessage(nickname, messageText)
+                                messageText = ""
                             }
                         }
-                    },
+                    }
                 ) {
                     Text("➤")
                 }
